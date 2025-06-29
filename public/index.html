@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IoT Data Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 IoT Data Dashboard</h1>
+            <p>Real-time sensor data from your connected devices</p>
+        </div>
+
+        <div class="controls">
+            <h3>Filter & Refresh</h3>
+            <div class="filter-group">
+                <label>Device ID:</label>
+                <input type="text" id="deviceFilter" placeholder="Filter by device ID" />
+                
+                <label>From:</label>
+                <input type="datetime-local" id="fromDate" />
+                
+                <label>To:</label>
+                <input type="datetime-local" id="toDate" />
+                
+                <button id="applyFilterBtn">Apply Filter</button>
+                <button id="refreshBtn">🔄 Refresh</button>
+                <button id="clearFiltersBtn">Clear Filters</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">Loading devices...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div id="devicesContainer" class="devices-grid"></div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: iot_data
+      MYSQL_USER: iot_user
+      MYSQL_PASSWORD: iot_password
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./scripts:/docker-entrypoint-initdb.d
+
+volumes:
+  db-data:

@@ -1,0 +1,10 @@
+# GET request
+curl http://localhost:3000/api/health
+
+curl http://localhost:3000/api/devices
+
+# POST request with JSON data
+curl -X POST http://localhost:3000/api/data \
+     -H "Content-Type: application/json" \
+     -d '{"device_id": "abc123", "device_name": "myDevice", "data": {"temperature": 23.5}}'
+
