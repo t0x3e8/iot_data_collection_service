@@ -2,10 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import { join } from 'path';
+import { join, dirname } from 'path';
 import { schedule } from 'node-cron';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 import dotenv from 'dotenv';
@@ -21,20 +20,20 @@ const app = express();
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"], // No unsafe-inline needed with event listeners
-      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline CSS
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"],
-    },
+      defaultSrc: ['\'self\''],
+      scriptSrc: ['\'self\''], // No unsafe-inline needed with event listeners
+      styleSrc: ['\'self\'', '\'unsafe-inline\''], // Allow inline CSS
+      imgSrc: ['\'self\'', 'data:', 'https:'],
+      connectSrc: ['\'self\''],
+      fontSrc: ['\'self\''],
+      objectSrc: ['\'none\''],
+      mediaSrc: ['\'self\''],
+      frameSrc: ['\'none\''],
+      baseUri: ['\'self\''],
+      formAction: ['\'self\'']
+    }
   },
-  crossOriginEmbedderPolicy: false, // Disable for development
+  crossOriginEmbedderPolicy: false // Disable for development
 }));
 
 // Rate limiting
@@ -54,9 +53,9 @@ app.use(express.urlencoded({ extended: true, limit: server.bodyLimit }));
 const publicPath = join(__dirname, 'public');
 console.log('Serving static files from:', publicPath);
 
-app.use(express.static(publicPath, { 
+app.use(express.static(publicPath, {
   index: false,
-  setHeaders: (res, path, stat) => {
+  setHeaders: (res, path, _stat) => {
     console.log('Serving file:', path);
     if (path.endsWith('.css')) {
       res.setHeader('Content-Type', 'text/css');
@@ -72,9 +71,9 @@ app.use(express.static(publicPath, {
 app.use('/api', apiRoutes);
 
 // Serve static files with proper MIME types - moved before device routes
-app.use(express.static(publicPath, { 
+app.use(express.static(publicPath, {
   index: false,
-  setHeaders: (res, path, stat) => {
+  setHeaders: (res, path, _stat) => {
     console.log('Serving file:', path);
     if (path.endsWith('.css')) {
       res.setHeader('Content-Type', 'text/css');
@@ -107,17 +106,17 @@ app.get('/device/:id', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || '1.0.0'
   });
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err, req, res, __dirnamenext) => {
   console.error('Error:', err.stack);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal server error',
     message: server.showErrorDetails ? err.message : 'Something went wrong!'
   });
@@ -141,7 +140,7 @@ if (dataRetention.enabled) {
       console.error('Data cleanup failed:', error);
     }
   });
-  
+
   console.log(`Data retention enabled: ${dataRetention.retentionDays} days`);
   console.log(`Cleanup scheduled: ${dataRetention.cleanupSchedule}`);
 }
@@ -165,7 +164,7 @@ process.on('unhandledRejection', err => {
 async function startServer() {
   try {
     await initDatabase();
-    
+
     app.listen(server.port, server.host, () => {
       console.log(`IoT Data Collector running on ${server.host}:${server.port}`);
       console.log(`Environment: ${server.environment}`);

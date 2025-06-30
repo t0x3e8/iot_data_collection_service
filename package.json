@@ -19,11 +19,15 @@
     "docker:logs:app": "docker-compose logs -f app",
     "docker:logs:mysql": "docker-compose logs -f mysql",
     "docker:clean": "docker-compose down -v --rmi local --remove-orphans",
-    "docker:prod": "docker-compose up --build -d"
+    "docker:prod": "docker-compose up --build -d",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:check": "eslint . --max-warnings 0",
+    "pretest": "npm run lint:check"
   },
   "keywords": ["express", "iot", "mysql", "api", "nodejs", "docker"],
   "author": "t0x3e8@gmail.com",
-  "license": "MIT",  
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/your-org/iot-data-collector.git"
@@ -38,6 +42,9 @@
     "node-cron": "^3.0.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
   }
 }
