@@ -65,7 +65,7 @@ jobs:
       run: npm ci
 
     - name: Install required tools
-      run: apt-get update && apt-get install -y curl procps
+      run: sudo apt-get update && sudo apt-get install -y curl procps
 
     - name: Run health check
       env:
@@ -84,6 +84,8 @@ jobs:
     name: Build Docker Image
     runs-on: ubuntu-latest
     needs: [lint, test]
+    # Skip this job when running with act (local testing)
+    if: ${{ !env.ACT }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
