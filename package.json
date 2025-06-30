@@ -10,9 +10,18 @@
     "mysql:up": "docker-compose up -d mysql",
     "mysql:down": "docker-compose down -v",
     "dev:with-db": "npm run mysql:up && npm run dev",
-    "start:with-db": "npm run mysql:up && npm start"
+    "start:with-db": "npm run mysql:up && npm start",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:restart": "docker-compose restart",
+    "docker:logs": "docker-compose logs -f",
+    "docker:logs:app": "docker-compose logs -f app",
+    "docker:logs:mysql": "docker-compose logs -f mysql",
+    "docker:clean": "docker-compose down -v --rmi local --remove-orphans",
+    "docker:prod": "docker-compose up --build -d"
   },
-  "keywords": ["express", "iot", "mysql", "api", "nodejs"],
+  "keywords": ["express", "iot", "mysql", "api", "nodejs", "docker"],
   "author": "t0x3e8@gmail.com",
   "license": "MIT",  
   "repository": {
