@@ -74,6 +74,14 @@ export default [
     }
   },
   {
+    files: ['**tests//setup.js', '**/testSetup.js'],
+    languageOptions: {
+      globals: {
+        ...globals.jest
+      }
+    }
+  },
+  {
     // Ignore certain files
     ignores: [
       'node_modules/**',

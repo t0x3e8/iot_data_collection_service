@@ -51,6 +51,7 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -67,7 +68,28 @@ jobs:
     - name: Install required tools
       run: sudo apt-get update && sudo apt-get install -y curl procps
 
-    - name: Run health check
+    - name: Wait for MySQL
+      run: |
+        timeout 60 bash -c 'until mysqladmin ping -h"127.0.0.1" --silent; do sleep 1; done'
+
+    - name: Run unit tests
+      env:
+        NODE_ENV: test
+        DB_HOST: 127.0.0.1
+        DB_USER: iot_user
+        DB_PASSWORD: iot_password
+        DB_NAME: iot_data_test
+        SKIP_DB: true
+      run: npm run test:ci
+
+    - name: Upload test coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+
+    - name: Run integration health check
       env:
         DB_HOST: 127.0.0.1
         DB_USER: iot_user
@@ -80,13 +102,44 @@ jobs:
         curl -f http://localhost:3000/health || exit 1
         pkill -f "node server.js"
 
-  build:
-    name: Build Docker Image
+  security:
+    name: Security Scan
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: lint
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run npm audit
+      run: npm audit --audit-level=high
+
+    - name: Run security scan with Snyk
+      uses: snyk/actions/node@master
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
     - name: Build Docker image
       run: docker build -t iot-data-collector .
@@ -170,9 +223,221 @@ jobs:
           fi
         done
 
+        # Test API endpoints
+        echo "Testing API endpoints..."
+
+        # Test POST /api/data
+        curl -X POST http://localhost:3000/api/data \
+          -H "Content-Type: application/json" \
+          -d '{"device_id": "ci_test", "device_name": "CI Test Device", "data": {"test": true}}' \
+          -f || exit 1
+
+        # Test GET /api/devices
+        curl -f http://localhost:3000/api/devices || exit 1
+
+        # Test GET /api/health
+        curl -f http://localhost:3000/api/health || exit 1
+
         # Show logs for debugging
         echo "Application logs:"
         docker compose -f docker-compose.test.yml logs app
 
         # Cleanup
         docker compose -f docker-compose.test.yml down -v
+
+    - name: Save Docker image
+      if: github.ref == 'refs/heads/main'
+      run: |
+        docker save iot-data-collector | gzip > iot-data-collector.tar.gz
+
+    - name: Upload build artifact
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v3
+      with:
+        name: docker-image
+        path: iot-data-collector.tar.gz
+        retention-days: 7
+
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install k6
+      run: |
+        sudo gpg -k
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+
+    - name: Create performance test script
+      run: |
+        cat > performance-test.js << 'EOF'
+        import http from 'k6/http';
+        import { check, sleep } from 'k6';
+
+        export let options = {
+          vus: 10,
+          duration: '30s',
+          thresholds: {
+            http_req_duration: ['p(95)<500'],
+            http_req_failed: ['rate<0.1'],
+          },
+        };
+
+        export default function () {
+          // Test GET /api/health
+          let healthResponse = http.get('http://localhost:3000/api/health');
+          check(healthResponse, {
+            'health status is 200': (r) => r.status === 200,
+            'health response time < 200ms': (r) => r.timings.duration < 200,
+          });
+
+          // Test GET /api/devices
+          let devicesResponse = http.get('http://localhost:3000/api/devices');
+          check(devicesResponse, {
+            'devices status is 200': (r) => r.status === 200,
+            'devices response time < 500ms': (r) => r.timings.duration < 500,
+          });
+
+          // Test POST /api/data
+          let postData = JSON.stringify({
+            device_id: `perf_test_${__VU}_${__ITER}`,
+            device_name: 'Performance Test Device',
+            data: { temperature: 20 + Math.random() * 10, timestamp: Date.now() }
+          });
+
+          let postResponse = http.post('http://localhost:3000/api/data', postData, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          check(postResponse, {
+            'post status is 201': (r) => r.status === 201,
+            'post response time < 1000ms': (r) => r.timings.duration < 1000,
+          });
+
+          sleep(1);
+        }
+        EOF
+
+    - name: Start application for performance testing
+      run: |
+        export NODE_ENV=test
+        export SKIP_DB=true
+        npm start &
+        sleep 10
+
+    - name: Run performance tests
+      run: k6 run performance-test.js
+
+    - name: Stop application
+      run: pkill -f "node server.js" || true
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build, performance]
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging.iot-api.example.com
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: docker-image
+
+    - name: Load Docker image
+      run: docker load < iot-data-collector.tar.gz
+
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        # Add your staging deployment commands here
+        # This could be kubectl, docker-compose, or other deployment tools
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, performance]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://api.iot-platform.example.com
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: docker-image
+
+    - name: Load Docker image
+      run: docker load < iot-data-collector.tar.gz
+
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production environment..."
+        # Add your production deployment commands here
+        # This could include:
+        # - Pushing to container registry
+        # - Updating Kubernetes deployments
+        # - Running database migrations
+        # - Health checks after deployment
+
+    - name: Post-deployment health check
+      run: |
+        echo "⏳ Waiting for deployment to be ready..."
+        sleep 30
+        # Add health check commands for your production environment
+        # curl -f https://api.iot-platform.example.com/health
+
+    - name: Notify deployment success
+      run: |
+        echo "✅ Production deployment completed successfully!"
+        # Add notification commands (Slack, email, etc.)
+
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    steps:
+    - name: Clean up artifacts
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            run_id: context.runId,
+          });
+
+          for (const artifact of artifacts.data.artifacts) {
+            if (artifact.name === 'docker-image') {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+              });
+              console.log(`Deleted artifact: ${artifact.name}`);
+            }
+          }
