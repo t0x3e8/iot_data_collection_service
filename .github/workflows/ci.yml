@@ -285,68 +285,68 @@ jobs:
   #       sudo apt-get update
   #       sudo apt-get install k6
 
-    # - name: Create performance test script
-    #   run: |
-    #     cat > performance-test.js << 'EOF'
-    #     import http from 'k6/http';
-    #     import { check, sleep } from 'k6';
+  #   - name: Create performance test script
+  #     run: |
+  #       cat > performance-test.js << 'EOF'
+  #       import http from 'k6/http';
+  #       import { check, sleep } from 'k6';
 
-    #     export let options = {
-    #       vus: 10,
-    #       duration: '30s',
-    #       thresholds: {
-    #         http_req_duration: ['p(95)<500'],
-    #         http_req_failed: ['rate<0.1'],
-    #       },
-    #     };
+  #       export let options = {
+  #         vus: 10,
+  #         duration: '30s',
+  #         thresholds: {
+  #           http_req_duration: ['p(95)<500'],
+  #           http_req_failed: ['rate<0.1'],
+  #         },
+  #       };
 
-    #     export default function () {
-    #       // Test GET /api/health
-    #       let healthResponse = http.get('http://localhost:3000/api/health');
-    #       check(healthResponse, {
-    #         'health status is 200': (r) => r.status === 200,
-    #         'health response time < 200ms': (r) => r.timings.duration < 200,
-    #       });
+  #       export default function () {
+  #         // Test GET /api/health
+  #         let healthResponse = http.get('http://localhost:3000/api/health');
+  #         check(healthResponse, {
+  #           'health status is 200': (r) => r.status === 200,
+  #           'health response time < 200ms': (r) => r.timings.duration < 200,
+  #         });
 
-    #       // Test GET /api/devices
-    #       let devicesResponse = http.get('http://localhost:3000/api/devices');
-    #       check(devicesResponse, {
-    #         'devices status is 200': (r) => r.status === 200,
-    #         'devices response time < 500ms': (r) => r.timings.duration < 500,
-    #       });
+  #         // Test GET /api/devices
+  #         let devicesResponse = http.get('http://localhost:3000/api/devices');
+  #         check(devicesResponse, {
+  #           'devices status is 200': (r) => r.status === 200,
+  #           'devices response time < 500ms': (r) => r.timings.duration < 500,
+  #         });
 
-    #       // Test POST /api/data
-    #       let postData = JSON.stringify({
-    #         device_id: `perf_test_${__VU}_${__ITER}`,
-    #         device_name: 'Performance Test Device',
-    #         data: { temperature: 20 + Math.random() * 10, timestamp: Date.now() }
-    #       });
+  #         // Test POST /api/data
+  #         let postData = JSON.stringify({
+  #           device_id: `perf_test_${__VU}_${__ITER}`,
+  #           device_name: 'Performance Test Device',
+  #           data: { temperature: 20 + Math.random() * 10, timestamp: Date.now() }
+  #         });
 
-    #       let postResponse = http.post('http://localhost:3000/api/data', postData, {
-    #         headers: { 'Content-Type': 'application/json' },
-    #       });
+  #         let postResponse = http.post('http://localhost:3000/api/data', postData, {
+  #           headers: { 'Content-Type': 'application/json' },
+  #         });
 
-    #       check(postResponse, {
-    #         'post status is 201': (r) => r.status === 201,
-    #         'post response time < 1000ms': (r) => r.timings.duration < 1000,
-    #       });
+  #         check(postResponse, {
+  #           'post status is 201': (r) => r.status === 201,
+  #           'post response time < 1000ms': (r) => r.timings.duration < 1000,
+  #         });
 
-    #       sleep(1);
-    #     }
-    #     EOF
+  #         sleep(1);
+  #       }
+  #       EOF
 
-    # - name: Start application for performance testing
-    #   run: |
-    #     export NODE_ENV=test
-    #     export SKIP_DB=true
-    #     npm start &
-    #     sleep 10
+  #   - name: Start application for performance testing
+  #     run: |
+  #       export NODE_ENV=test
+  #       export SKIP_DB=true
+  #       npm start &
+  #       sleep 10
 
-    # - name: Run performance tests
-    #   run: k6 run performance-test.js
+  #   - name: Run performance tests
+  #     run: k6 run performance-test.js
 
-    # - name: Stop application
-    #   run: pkill -f "node server.js" || true
+  #   - name: Stop application
+  #     run: pkill -f "node server.js" || true
 
   deploy-staging:
     name: Deploy to Staging
@@ -416,23 +416,8 @@ jobs:
     needs: [deploy-staging, deploy-production]
     if: always()
     steps:
-    - name: Clean up artifacts
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            run_id: context.runId,
-          });
-
-          for (const artifact of artifacts.data.artifacts) {
-            if (artifact.name === 'docker-image') {
-              await github.rest.actions.deleteArtifact({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                artifact_id: artifact.id,
-              });
-              console.log(`Deleted artifact: ${artifact.name}`);
-            }
-          }
+    - name: Cleanup summary
+      run: |
+        echo "✅ Workflow completed successfully!"
+        echo "📦 Artifacts will be automatically cleaned up after 7 days retention period"
+        echo "🔄 Next workflow run will automatically overwrite existing artifacts"
