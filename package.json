@@ -34,7 +34,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/iot-data-collector.git"
+    "url": "https://github.com/t0x3e8/iot_data_collection_service.git"
   },
   "dependencies": {
     "cors": "^2.8.5",
