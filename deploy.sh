@@ -1,10 +1,10 @@
 #!/bin/zsh
 
-# Load configuration from .env file
-if [ -f .env ]; then
-    source .env
+# Load configuration from .env-docker file
+if [ -f .env-docker ]; then
+    source .env-docker
 else
-    echo "Error: .env file not found"
+    echo "Error: .env-docker file not found"
     exit 1
 fi
 

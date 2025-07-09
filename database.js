@@ -13,9 +13,6 @@ const dbConfig = {
   waitForConnections: true,
   connectionLimit: _database.connectionLimit,
   queueLimit: _database.queueLimit,
-  acquireTimeout: _database.acquireTimeout,
-  timeout: _database.timeout,
-  reconnect: _database.reconnect,
   charset: _database.charset,
   timezone: '+00:00' // Store all dates in UTC
 };
@@ -63,19 +60,19 @@ async function createTables() {
 // Create indexes for better performance
 async function createIndexes() {
   const indexes = [
-    'CREATE INDEX IF NOT EXISTS idx_device_id ON sensor_data (device_id)',
-    'CREATE INDEX IF NOT EXISTS idx_timestamp ON sensor_data (timestamp)',
-    'CREATE INDEX IF NOT EXISTS idx_device_timestamp ON sensor_data (device_id, timestamp DESC)',
-    'CREATE INDEX IF NOT EXISTS idx_created_at ON sensor_data (created_at)'
+    { name: 'idx_device_id', query: 'CREATE INDEX idx_device_id ON sensor_data (device_id)' },
+    { name: 'idx_timestamp', query: 'CREATE INDEX idx_timestamp ON sensor_data (timestamp)' },
+    { name: 'idx_device_timestamp', query: 'CREATE INDEX idx_device_timestamp ON sensor_data (device_id, timestamp DESC)' },
+    { name: 'idx_created_at', query: 'CREATE INDEX idx_created_at ON sensor_data (created_at)' }
   ];
 
-  for (const indexQuery of indexes) {
+  for (const index of indexes) {
     try {
-      await pool.execute(indexQuery);
+      await pool.execute(index.query);
     } catch (error) {
       // Index might already exist, ignore duplicate key errors
       if (error.code !== 'ER_DUP_KEYNAME') {
-        console.warn('Index creation warning:', error.message);
+        console.warn(`Index creation warning for ${index.name}:`, error.message);
       }
     }
   }

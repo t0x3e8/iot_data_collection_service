@@ -20,9 +20,6 @@ const config = {
     database: process.env.DB_NAME || 'iot_data',
     connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 10,
     queueLimit: parseInt(process.env.DB_QUEUE_LIMIT) || 0,
-    acquireTimeout: parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 60000,
-    timeout: parseInt(process.env.DB_TIMEOUT) || 60000,
-    reconnect: process.env.DB_RECONNECT !== 'false',
     charset: process.env.DB_CHARSET || 'utf8mb4'
   },
 
