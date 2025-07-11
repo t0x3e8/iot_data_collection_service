@@ -7,14 +7,11 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-
     "mysql:up": "docker-compose up -d mysql",
     "mysql:down": "docker-compose down -v",
     "mysql:logs": "docker-compose logs -f mysql",
-
     "dev:with-db": "npm run mysql:up && sleep 15 && npm run dev",
     "start:with-db": "npm run mysql:up && sleep 15 && npm start",
-
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
@@ -25,7 +22,6 @@
     "docker:clean": "docker-compose down -v --rmi local --remove-orphans",
     "docker:prod": "docker-compose up --build -d",
     "docker:reset": "npm run docker:clean && npm run docker:up",
-
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:check": "eslint . --max-warnings 0",
@@ -34,11 +30,17 @@
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --ci --coverage --watchAll=false",
     "pretest": "npm run lint:check",
-
     "health": "curl -v http://localhost:3003/health",
     "status": "docker-compose ps && echo '\\nApplication health:' && npm run health"
   },
-  "keywords": ["express", "iot", "mysql", "api", "nodejs", "docker"],
+  "keywords": [
+    "express",
+    "iot",
+    "mysql",
+    "api",
+    "nodejs",
+    "docker"
+  ],
   "author": "t0x3e8@gmail.com",
   "license": "MIT",
   "repository": {
@@ -50,17 +52,19 @@
     "dotenv": "^16.3.1",
     "express": "^4.19.2",
     "express-rate-limit": "^7.0.0",
+    "glob": "^11.0.3",
     "helmet": "^7.0.0",
     "mysql2": "^3.9.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "superagent": "^10.2.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0",
     "@eslint/js": "^9.0.0",
+    "@jest/globals": "^29.7.0",
     "eslint": "^9.0.0",
     "globals": "^15.0.0",
     "jest": "^29.7.0",
-    "supertest": "^6.3.4",
-    "@jest/globals": "^29.7.0"
+    "nodemon": "^3.1.0",
+    "supertest": "^6.3.4"
   }
 }
