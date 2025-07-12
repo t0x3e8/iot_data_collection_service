@@ -16,24 +16,26 @@ import { server, rateLimit as _rateLimit, cors as _cors, dataRetention } from '.
 
 const app = express();
 
-// Security middleware with proper CSP configuration
+// Security middleware with configurable CSP
+const cspDirectives = {
+  defaultSrc: ['\'self\''],
+  scriptSrc: server.allowInlineScripts ? ['\'self\'', '\'unsafe-inline\''] : ['\'self\''],
+  styleSrc: ['\'self\'', '\'unsafe-inline\''],
+  imgSrc: ['\'self\'', 'data:', 'http:', 'https:'],
+  connectSrc: ['\'self\''],
+  fontSrc: ['\'self\''],
+  objectSrc: ['\'none\''],
+  mediaSrc: ['\'self\''],
+  frameSrc: ['\'none\''],
+  baseUri: ['\'self\''],
+  formAction: ['\'self\'']
+};
+
 app.use(helmet({
   contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ['\'self\''],
-      scriptSrc: ['\'self\''], // No unsafe-inline needed with event listeners
-      styleSrc: ['\'self\'', '\'unsafe-inline\''], // Allow inline CSS
-      imgSrc: ['\'self\'', 'data:', 'https:'],
-      connectSrc: ['\'self\''],
-      fontSrc: ['\'self\''],
-      objectSrc: ['\'none\''],
-      mediaSrc: ['\'self\''],
-      frameSrc: ['\'none\''],
-      baseUri: ['\'self\''],
-      formAction: ['\'self\'']
-    }
+    directives: cspDirectives
   },
-  crossOriginEmbedderPolicy: false // Disable for development
+  crossOriginEmbedderPolicy: false
 }));
 
 // Rate limiting
