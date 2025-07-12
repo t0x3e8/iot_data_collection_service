@@ -16,27 +16,36 @@ import { server, rateLimit as _rateLimit, cors as _cors, dataRetention } from '.
 
 const app = express();
 
-// Security middleware with configurable CSP
-const cspDirectives = {
-  defaultSrc: ['\'self\''],
-  scriptSrc: server.allowInlineScripts ? ['\'self\'', '\'unsafe-inline\''] : ['\'self\''],
-  styleSrc: ['\'self\'', '\'unsafe-inline\''],
-  imgSrc: ['\'self\'', 'data:', 'http:', 'https:'],
-  connectSrc: ['\'self\''],
-  fontSrc: ['\'self\''],
-  objectSrc: ['\'none\''],
-  mediaSrc: ['\'self\''],
-  frameSrc: ['\'none\''],
-  baseUri: ['\'self\''],
-  formAction: ['\'self\'']
-};
+// Conditional security middleware
+if (server.environment === 'production') {
+  // Full helmet configuration for production
+  const cspDirectives = {
+    defaultSrc: ['\'self\''],
+    scriptSrc: server.allowInlineScripts ? ['\'self\'', '\'unsafe-inline\''] : ['\'self\''],
+    styleSrc: ['\'self\'', '\'unsafe-inline\''],
+    imgSrc: ['\'self\'', 'data:', 'http:', 'https:'],
+    connectSrc: ['\'self\''],
+    fontSrc: ['\'self\''],
+    objectSrc: ['\'none\''],
+    mediaSrc: ['\'self\''],
+    frameSrc: ['\'none\''],
+    baseUri: ['\'self\''],
+    formAction: ['\'self\'']
+  };
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: cspDirectives
-  },
-  crossOriginEmbedderPolicy: false
-}));
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: cspDirectives
+    },
+    crossOriginEmbedderPolicy: false
+  }));
+} else {
+  // Minimal helmet for development - no CSP
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
+  }));
+}
 
 // Rate limiting
 const limiter = rateLimit({
