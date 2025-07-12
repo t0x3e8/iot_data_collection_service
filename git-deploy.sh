@@ -126,9 +126,9 @@ fi
 APP_PORT=$(grep "^PORT=" .env | cut -d '=' -f2 | tr -d ' ')
 APP_PORT=${APP_PORT:-3000}
 
-echo "Updating docker-compose.yml to use port $APP_PORT..."
-sed -i.bak "s/- \"3000:3000\"/- \"$APP_PORT:$APP_PORT\"/g" docker-compose.yml
-sed -i.bak2 "s/http:\/\/localhost:3000\/health/http:\/\/localhost:$APP_PORT\/health/g" docker-compose.yml
+echo "Updating docker-compose.yml to use external port $APP_PORT..."
+# Map external port to internal port (let app use its configured PORT)
+sed -i.bak "s/- \"3000:3000\"/- \"$APP_PORT:3000\"/g" docker-compose.yml
 
 # Final confirmation
 echo
