@@ -122,13 +122,12 @@ if [ "$EDIT_ENV" = "y" ] || [ "$EDIT_ENV" = "Y" ]; then
     fi
 fi
 
-# Read PORT from .env and update docker-compose.yml
-APP_PORT=$(grep "^PORT=" .env | cut -d '=' -f2 | tr -d ' ')
-APP_PORT=${APP_PORT:-3000}
+# Read EXTERNAL_PORT from .env and update docker-compose.yml if needed
+EXTERNAL_PORT=$(grep "^EXTERNAL_PORT=" .env | cut -d '=' -f2 | tr -d ' ')
+EXTERNAL_PORT=${EXTERNAL_PORT:-3000}
 
-echo "Updating docker-compose.yml to use external port $APP_PORT..."
-# Map external port to internal port (let app use its configured PORT)
-sed -i.bak "s/- \"3000:3000\"/- \"$APP_PORT:3000\"/g" docker-compose.yml
+echo "Using external port $EXTERNAL_PORT..."
+# Note: docker-compose.yml now uses EXTERNAL_PORT environment variable, no need to modify file
 
 # Final confirmation
 echo
@@ -165,14 +164,10 @@ sudo docker-compose up -d --build
 echo "Waiting for services to start..."
 sleep 10
 
-# Read PORT from .env file
-APP_PORT=$(grep "^PORT=" .env | cut -d '=' -f2 | tr -d ' ')
-APP_PORT=${APP_PORT:-3000}
-
 # Check if application is running
-echo "Checking application health on port $APP_PORT..."
+echo "Checking application health on port $EXTERNAL_PORT..."
 for i in {1..15}; do
-    if curl -f http://localhost:$APP_PORT/health >/dev/null 2>&1; then
+    if curl -f http://127.0.0.1:$EXTERNAL_PORT/health >/dev/null 2>&1; then
         echo "Application is running successfully!"
         break
     else
@@ -189,9 +184,9 @@ echo
 echo "================================================="
 echo "Deployment completed!"
 echo "================================================="
-echo "Application URL: http://localhost:$APP_PORT"
-echo "Health Check:    http://localhost:$APP_PORT/health"
-echo "Database:        MySQL on localhost:3306"
+echo "Application URL: http://127.0.0.1:$EXTERNAL_PORT"
+echo "Health Check:    http://127.0.0.1:$EXTERNAL_PORT/health"
+echo "Database:        MySQL on 127.0.0.1:3306"
 echo
 echo "Useful commands:"
 echo "  View logs:     sudo docker-compose logs -f"

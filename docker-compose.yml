@@ -28,7 +28,7 @@ services:
     container_name: iot_app
     restart: always
     ports:
-      - "3000:3000"
+      - "${EXTERNAL_PORT:-3000}:3000"
     env_file:
       - .env
     environment:
