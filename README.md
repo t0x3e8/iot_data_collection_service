@@ -74,6 +74,7 @@ DB_NAME=iot_data
 
 # Application Configuration
 PORT=3000
+EXTERNAL_PORT=3000
 NODE_ENV=development
 
 # Optional: Add any other required environment variables
@@ -137,6 +138,23 @@ npm run lint:fix
 
 ## 🚀 Deployment
 
+### Git-based Deployment (Recommended)
+
+Use the included `git-deploy.sh` script for automated deployment:
+
+```bash
+# Download and run the deployment script
+wget https://raw.githubusercontent.com/t0x3e8/iot_data_collection_service/main/git-deploy.sh
+chmod +x git-deploy.sh
+./git-deploy.sh
+```
+
+The script will:
+- Clone the repository
+- Set up environment configuration
+- Deploy using Docker Compose
+- Configure external port mapping via `EXTERNAL_PORT`
+
 ### Docker Production Deployment
 
 ```bash
@@ -150,7 +168,7 @@ npm run docker:prod
 ### Manual Deployment
 
 1. Ensure MySQL database is running and accessible
-2. Set production environment variables
+2. Set production environment variables (including `EXTERNAL_PORT` for port mapping)
 3. Install dependencies: `npm ci --only=production`
 4. Start the application: `npm start`
 
