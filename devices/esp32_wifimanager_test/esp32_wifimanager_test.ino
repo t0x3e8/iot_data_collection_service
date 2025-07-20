@@ -17,6 +17,7 @@ String serverURL = "http://your_dashboard_url.com";
 // Reading frequency configuration
 int readingFrequencyMinutes = 30; // minutes
 int readingFrequency = readingFrequencyMinutes * 60000; // convert to milliseconds
+uint64_t deepSleepMicroseconds = readingFrequencyMinutes * 60 * 1000000; // convert to microseconds for deep sleep
 
 // Hardware pin configuration
 const int BUTTON_PIN = 0; // GPIO pin for the reset button
@@ -72,10 +73,12 @@ void setup() {
   // Setup WiFiManager with custom parameters
   setupWiFiManager(wifiManager, preferences, deviceName, serverURL, readingFrequencyMinutes, readingFrequency);
   readingFrequency = readingFrequencyMinutes * 60000; // update after loading config
+  deepSleepMicroseconds = readingFrequencyMinutes * 60 * 1000000; // update deep sleep duration
   
   // Set callback to save custom parameters
   wifiManager.setSaveConfigCallback([&]() {
     saveConfigCallback(wifiManager, preferences, deviceName, serverURL, readingFrequencyMinutes, readingFrequency);
+    deepSleepMicroseconds = readingFrequencyMinutes * 60 * 1000000; // update deep sleep duration
   });
   
   // WiFiManager auto connect
@@ -94,6 +97,37 @@ void setup() {
   
   // Print current configuration
   printConfiguration(deviceName, serverURL, readingFrequencyMinutes, readingFrequency);
+  
+  // Take initial sensor reading and send data before going to sleep
+  if (readAHT10(&currentTemperature, &currentHumidity)) {
+    Serial.println("=== Initial Sensor Reading ===");
+    Serial.print("Temperature: ");
+    Serial.print(currentTemperature, 2);
+    Serial.println(" °C");
+    
+    Serial.print("Humidity: ");
+    Serial.print(currentHumidity, 2);
+    Serial.println(" %");
+    
+    // Send data immediately
+    if (WiFi.status() == WL_CONNECTED) {
+      postDataToServer(serverURL, deviceName, currentTemperature, currentHumidity);
+    } else {
+      Serial.println("WiFi not connected, cannot post data");
+    }
+  } else {
+    Serial.println("Failed to read from AHT10!");
+  }
+  
+  // Enter deep sleep mode
+  Serial.println("=== Entering Deep Sleep ===");
+  Serial.print("Sleep duration: ");
+  Serial.print(readingFrequencyMinutes);
+  Serial.println(" minutes");
+  Serial.flush(); // Ensure all serial output is sent before sleep
+  
+  esp_sleep_enable_timer_wakeup(deepSleepMicroseconds);
+  esp_deep_sleep_start();
 }
 
 // ============================================================================
@@ -101,75 +135,16 @@ void setup() {
 // ============================================================================
 
 void loop() {
-  handleButtonPress();
-  handleSensorReading();
-  
-  delay(100); // Small delay to prevent excessive polling
+  // This loop should never be reached in deep sleep mode
+  // If we reach here, something went wrong - restart
+  Serial.println("ERROR: Loop reached - restarting to fix issue");
+  ESP.restart();
 }
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
-void handleButtonPress() {
-  // Check button state for WiFi reset functionality
-  if (digitalRead(BUTTON_PIN) == LOW) { // Button pressed (assuming active LOW)
-    if (!buttonPressed) {
-      buttonPressed = true;
-      buttonPressStartTime = millis();
-      Serial.println("Button pressed - hold for 15 seconds to reset WiFi settings");
-    } else {
-      // Check if button has been held for 15 seconds
-      if (millis() - buttonPressStartTime >= RESET_DURATION) {
-        Serial.println("Resetting WiFi settings...");
-        
-        // Clear saved WiFi credentials and custom configuration
-        wifiManager.resetSettings();
-        preferences.clear();
-        
-        Serial.println("WiFi settings and configuration cleared. Restarting...");
-        delay(1000);
-        ESP.restart();
-      }
-    }
-  } else {
-    // Button released
-    if (buttonPressed) {
-      buttonPressed = false;
-      Serial.println("Button released");
-    }
-  }
-}
-
-void handleSensorReading() {
-  unsigned long currentTime = millis();
-  
-  // Read sensor data based on configured frequency
-  if (currentTime - lastSensorRead >= readingFrequency) {
-    if (readAHT10(&currentTemperature, &currentHumidity)) {
-      Serial.println("=== Sensor Reading ===");
-      Serial.print("Temperature: ");
-      Serial.print(currentTemperature, 2);
-      Serial.println(" °C");
-      
-      Serial.print("Humidity: ");
-      Serial.print(currentHumidity, 2);
-      Serial.println(" %");
-      
-      sensorDataValid = true;
-      
-      // Send data immediately after reading sensor
-      if (WiFi.status() == WL_CONNECTED) {
-        postDataToServer(serverURL, deviceName, currentTemperature, currentHumidity);
-        lastDataPost = currentTime;
-      } else {
-        Serial.println("WiFi not connected, cannot post data");
-      }
-    } else {
-      Serial.println("Failed to read from AHT10!");
-      sensorDataValid = false;
-    }
-    
-    lastSensorRead = currentTime;
-  }
-}
+// These functions are no longer needed in deep sleep mode
+// Button press functionality is handled during setup before sleep
+// Sensor reading is handled once per wake cycle in setup
