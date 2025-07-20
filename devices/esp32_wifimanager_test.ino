@@ -139,18 +139,20 @@ void loop() {
       Serial.println(" %");
       
       sensorDataValid = true;
+      
+      // Send data immediately after reading sensor
+      if (WiFi.status() == WL_CONNECTED) {
+        postDataToServer();
+        lastDataPost = currentTime;
+      } else {
+        Serial.println("WiFi not connected, cannot post data");
+      }
     } else {
       Serial.println("Failed to read from AHT10!");
       sensorDataValid = false;
     }
     
     lastSensorRead = currentTime;
-  }
-  
-  // Post data to server every 30 minutes (if sensor data is valid)
-  if (currentTime - lastDataPost >= 1800000 && sensorDataValid && WiFi.status() == WL_CONNECTED) {
-    postDataToServer();
-    lastDataPost = currentTime;
   }
   
   delay(100); // Small delay to prevent excessive polling
